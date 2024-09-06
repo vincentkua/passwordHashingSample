@@ -28,7 +28,9 @@ public class UserService {
         User userfound = userRepository.findUser(username);
         // Validate Password with passwordEncoder
         Boolean passwordValid = passwordEncoder.matches(password, userfound.getHashedPassword());
+
         return passwordValid;
+
     }
 
 }

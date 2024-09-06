@@ -14,6 +14,7 @@ import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonReader;
 import vk.loginsample.repository.UserRepository;
+import vk.loginsample.services.JWTService;
 import vk.loginsample.services.UserService;
 
 @RestController
@@ -24,6 +25,9 @@ public class UserController {
 
     @Autowired
     UserService userService;
+
+    @Autowired
+    JWTService jwtService;
 
     @PostMapping(value = "/createUser")
     public ResponseEntity<String> createUser(@RequestBody String requestJsonPayload) {
@@ -70,8 +74,10 @@ public class UserController {
             Boolean validatedUser = userService.validateUserService(user, password);
 
             if (validatedUser) {
+                String jwtToken = jwtService.generateJwtToken(user);
                 JsonObject errorResponse = Json.createObjectBuilder()
                         .add("success", "User validated")
+                        .add("jwtToken", jwtToken)
                         .build();
                 return ResponseEntity.status(HttpStatus.OK).body(errorResponse.toString());
             } else {
@@ -83,8 +89,42 @@ public class UserController {
         } catch (Exception e) {
             JsonObject errorResponse = Json.createObjectBuilder()
                     .add("error", "An unexpected error occurred")
+                    .add("message", e.getMessage())
                     .build();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse.toString());
         }
+    }
+
+    @PostMapping(value = "/validateJWT")
+    public ResponseEntity<String> validateJWT(@RequestBody String requestJwtJsonPayload) {
+
+        try {
+            // Read JWT Json into String
+            JsonReader reader = Json.createReader(new StringReader(requestJwtJsonPayload));
+            JsonObject jsonobj = reader.readObject();
+            String user = jsonobj.getString("user");
+            String jwtString = jsonobj.getString("jwtToken");
+
+            Boolean validateJWT = jwtService.validateJwtToken(jwtString, user);
+
+            if (validateJWT) {
+                JsonObject errorResponse = Json.createObjectBuilder()
+                        .add("success", "JWT validated")
+                        .build();
+                return ResponseEntity.status(HttpStatus.OK).body(errorResponse.toString());
+            } else {
+                JsonObject errorResponse = Json.createObjectBuilder()
+                        .add("error", "An unexpected error occurred")
+                        .build();
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse.toString());
+            }
+        } catch (Exception e) {
+            JsonObject errorResponse = Json.createObjectBuilder()
+                    .add("error", "An unexpected error occurred")
+                    .add("message", e.getMessage())
+                    .build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse.toString());
+        }
+
     }
 }
