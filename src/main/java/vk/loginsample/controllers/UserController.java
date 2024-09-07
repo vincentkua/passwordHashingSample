@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -96,27 +97,40 @@ public class UserController {
     }
 
     @PostMapping(value = "/validateJWT")
-    public ResponseEntity<String> validateJWT(@RequestBody String requestJwtJsonPayload) {
+    public ResponseEntity<String> validateJWT(
+            @RequestHeader(value = "Authorization", required = true) String authorizationHeader,
+            @RequestBody String requestBody) {
 
         try {
-            // Read JWT Json into String
-            JsonReader reader = Json.createReader(new StringReader(requestJwtJsonPayload));
-            JsonObject jsonobj = reader.readObject();
-            String user = jsonobj.getString("user");
-            String jwtString = jsonobj.getString("jwtToken");
+            // Step 1: Extract the JWT token from the Authorization header
+            if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+                String jwtString = authorizationHeader.substring(7); // Remove "Bearer " prefix
 
-            Boolean validateJWT = jwtService.validateJwtToken(jwtString, user);
+                // Step 2: Parse the username from the request body
+                JsonReader reader = Json.createReader(new StringReader(requestBody));
+                JsonObject jsonobj = reader.readObject();
+                String username = jsonobj.getString("user"); // Expect "username" field in the body
 
-            if (validateJWT) {
-                JsonObject errorResponse = Json.createObjectBuilder()
-                        .add("success", "JWT validated")
-                        .build();
-                return ResponseEntity.status(HttpStatus.OK).body(errorResponse.toString());
+                // Step 3: Validate the JWT token (you can pass the token and username if
+                // necessary)
+                boolean isTokenValid = jwtService.validateJwtToken(jwtString, username);
+
+                if (isTokenValid) {
+                    JsonObject successResponse = Json.createObjectBuilder()
+                            .add("success", "JWT validated")
+                            .build();
+                    return ResponseEntity.status(HttpStatus.OK).body(successResponse.toString());
+                } else {
+                    JsonObject errorResponse = Json.createObjectBuilder()
+                            .add("error", "Invalid or expired token")
+                            .build();
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse.toString());
+                }
             } else {
                 JsonObject errorResponse = Json.createObjectBuilder()
-                        .add("error", "An unexpected error occurred")
+                        .add("error", "Missing or invalid Authorization header")
                         .build();
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse.toString());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse.toString());
             }
         } catch (Exception e) {
             JsonObject errorResponse = Json.createObjectBuilder()
@@ -125,6 +139,5 @@ public class UserController {
                     .build();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse.toString());
         }
-
     }
 }
