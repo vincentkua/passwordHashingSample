@@ -34,13 +34,14 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, CorsConfigurationSource corsConfigurationSource) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, CorsConfigurationSource corsConfigurationSource)
+            throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource))  // Apply custom CORS configuration
-            .csrf(csrf -> csrf.disable())  // Disable CSRF protection if not needed
-            .authorizeHttpRequests((requests) -> requests
-                .requestMatchers("/api/**", "**").permitAll()  // Allow API routes and home page
-                .anyRequest().authenticated());  // Protect other routes
+                .cors(cors -> cors.configurationSource(corsConfigurationSource)) // Apply custom CORS configuration
+                .csrf(csrf -> csrf.disable()) // Disable CSRF protection if not needed
+                .authorizeHttpRequests((requests) -> requests
+                        .requestMatchers("/api/**", "**").permitAll() // Allow API routes and home page
+                        .anyRequest().authenticated()); // Protect other routes
 
         return http.build();
     }
